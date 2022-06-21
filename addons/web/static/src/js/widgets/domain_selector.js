@@ -22,6 +22,8 @@ var operator_mapping = {
     "<=": "<=",
     "ilike": _lt("contains"),
     "not ilike": _lt("does not contain"),
+    "regexp": _lt("matches"),
+    "not regexp": _lt("doesn't match"),
     "in": _lt("in"),
     "not in": _lt("not in"),
 
@@ -868,7 +870,8 @@ var DomainLeaf = DomainNode.extend({
             case "char":
             case "text":
             case "html":
-                operators = _.pick(operator_mapping, "=", "!=", "ilike", "not ilike", "set", "not set", "in", "not in");
+                operators = _.pick(operator_mapping, "=", "!=", "ilike", "not ilike", "regexp", "not regexp",
+                    "set", "not set", "in", "not in");
                 break;
 
             case "many2many":
