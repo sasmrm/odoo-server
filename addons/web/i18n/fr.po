@@ -5072,6 +5072,22 @@ msgstr "est défini"
 #. module: web
 #. openerp-web
 #: code:addons/web/static/src/js/control_panel/search_utils.js:0
+#: code:addons/web/static/src/js/widgets/domain_selector.js:0
+#, python-format
+msgid "matches"
+msgstr "correspond"
+
+#. module: web
+#. openerp-web
+#: code:addons/web/static/src/js/control_panel/search_utils.js:0
+#: code:addons/web/static/src/js/widgets/domain_selector.js:0
+#, python-format
+msgid "doesn't match"
+msgstr "ne correspond pas"
+
+#. module: web
+#. openerp-web
+#: code:addons/web/static/src/js/control_panel/search_utils.js:0
 #, python-format
 msgid "is true"
 msgstr "est vrai"
