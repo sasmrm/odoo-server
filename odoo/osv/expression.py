@@ -942,7 +942,8 @@ class expression(object):
                         push_result(expr, params)
 
                 elif field.translate is True and right:
-                    need_wildcard = operator in ('like', 'ilike', 'not like', 'not ilike')
+                    need_wildcard = (operator in ('like', 'ilike', 'not like', 'not ilike')
+                                     and '%' not in right and '_' not in right)
                     sql_operator = {
                         '=like': 'like', '=ilike': 'ilike', 'regexp': '~*', 'not regexp': '!~*'
                     }.get(operator, operator)
@@ -1066,7 +1067,8 @@ class expression(object):
                 query, params = self.__leaf_to_sql((left, '=', right), model, alias)
 
         else:
-            need_wildcard = operator in ('like', 'ilike', 'not like', 'not ilike')
+            need_wildcard = (operator in ('like', 'ilike', 'not like', 'not ilike')
+                             and '%' not in right and '_' not in right)
             sql_operator = {
                 '=like': 'like', '=ilike': 'ilike','regexp': '~*','not regexp': '!~*'
             }.get(operator, operator)
