@@ -116,7 +116,8 @@ class TestExpression(SavepointCaseWithUserDemo):
         test('like', 'A', ['a', 'ab', 'a b', 'b ab'])
         test('not ilike', 'B', ['0', 'a'])
         test('not like', 'AB', ['0', 'a', 'b', 'a b'])
-
+        test('regexp', 'b.*b', ['b ab'])
+        test('not regexp', '[ab]+', ['0', 'a b', 'b ab'])
     def test_09_hierarchy_filtered_domain(self):
         Partner = self.env['res.partner']
         p = Partner.create({'name': 'dummy'})
