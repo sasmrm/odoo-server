@@ -50,6 +50,8 @@ const FIELD_OPERATORS = {
         { symbol: "!=", description: _lt("is not equal to") },
         { symbol: "!=", description: _lt("is set"), value: false },
         { symbol: "=", description: _lt("is not set"), value: false },
+        { symbol: "regexp", description: _lt("matches") },
+        { symbol: "not regexp", description: _lt("doesn't match") },
     ],
     json: [
         { symbol: "ilike", description: _lt("contains") },
