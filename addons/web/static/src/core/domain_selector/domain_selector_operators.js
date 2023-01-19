@@ -107,6 +107,20 @@ dso.add("=ilike", {
     onDidChange: onDidChange(() => ({ value: "" })),
     matches: matchValue(),
 });
+dso.add("regexp", {
+    category: "regexp",
+    label: _lt("matches"),
+    value: "regexp",
+    onDidChange: onDidChange(() => ({ value: "" })),
+    matches: matchValue(),
+});
+dso.add("not regexp", {
+    category: "regexp",
+    label: _lt("doesn't match"),
+    value: "not regexp",
+    onDidChange: onDidChange(() => ({ value: "" })),
+    matches: matchValue(),
+});
 dso.add("child_of", {
     category: "relation",
     label: _lt("child of"),

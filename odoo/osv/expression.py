@@ -142,13 +142,13 @@ DOMAIN_OPERATORS = (NOT_OPERATOR, OR_OPERATOR, AND_OPERATOR)
 # operators are also used. In this case its right operand has the form (subselect, params).
 TERM_OPERATORS = ('=', '!=', '<=', '<', '>', '>=', '=?', '=like', '=ilike',
                   'like', 'not like', 'ilike', 'not ilike', 'in', 'not in',
-                  'child_of', 'parent_of')
+                  'child_of', 'parent_of', 'regexp', 'not regexp')
 
 # A subset of the above operators, with a 'negative' semantic. When the
 # expressions 'in NEGATIVE_TERM_OPERATORS' or 'not in NEGATIVE_TERM_OPERATORS' are used in the code
 # below, this doesn't necessarily mean that any of those NEGATIVE_TERM_OPERATORS is
 # legal in the processed term.
-NEGATIVE_TERM_OPERATORS = ('!=', 'not like', 'not ilike', 'not in')
+NEGATIVE_TERM_OPERATORS = ('!=', 'not like', 'not ilike', 'not in', 'not regexp')
 
 # Negation of domain expressions
 DOMAIN_OPERATORS_NEGATION = {
@@ -168,6 +168,8 @@ TERM_OPERATORS_NEGATION = {
     'not in': 'in',
     'not like': 'like',
     'not ilike': 'ilike',
+    'not regexp': 'regexp',
+    'regexp': 'not regexp',
 }
 
 TRUE_LEAF = (1, '=', 1)
@@ -961,7 +963,10 @@ class expression(object):
                         push_result(expr, params)
 
                 elif field.translate and isinstance(right, str):
-                    sql_operator = {'=like': 'like', '=ilike': 'ilike'}.get(operator, operator)
+                    sql_operator = {
+                        '=like': 'like', '=ilike': 'ilike', 'regexp': '~*', 'not regexp': '!~*'
+                    }.get(operator, operator)
+                    is_pattern_matching = sql_operator.endswith('like') or '~' in sql_operator
                     expr = ''
                     params = []
 
@@ -987,7 +992,7 @@ class expression(object):
                             expr += f"{_left} {_sql_operator} {_unaccent('%s')} AND "
                             params.append(_right)
 
-                    unaccent = self._unaccent(field) if sql_operator.endswith('like') else lambda x: x
+                    unaccent = self._unaccent(field) if is_pattern_matching else lambda x: x
                     lang = model.env.lang or 'en_US'
                     if lang == 'en_US':
                         left = unaccent(f""""{alias}"."{left}"->>'en_US'""")
@@ -1130,10 +1135,11 @@ class expression(object):
                 raise ValueError("Invalid field %r in domain term %r" % (left, leaf))
 
             need_wildcard = operator in ('like', 'ilike', 'not like', 'not ilike')
-            sql_operator = {'=like': 'like', '=ilike': 'ilike'}.get(operator, operator)
-            cast = '::text' if sql_operator.endswith('like') else ''
+            sql_operator = {'=like': 'like', '=ilike': 'ilike','regexp': '~*','not regexp': '!~*'}.get(operator, operator)
+            is_pattern_matching = sql_operator.endswith('like') or '~' in sql_operator
+            cast = '::text' if is_pattern_matching else ''
 
-            unaccent = self._unaccent(field) if sql_operator.endswith('like') else lambda x: x
+            unaccent = self._unaccent(field) if is_pattern_matching else lambda x: x
             column = '%s.%s' % (table_alias, _quote(left))
             query = f'({unaccent(column + cast)} {sql_operator} {unaccent("%s")})'
 
