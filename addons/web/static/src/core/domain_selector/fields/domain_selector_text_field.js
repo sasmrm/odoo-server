@@ -21,7 +21,7 @@ Object.assign(DomainSelectorTextField, {
         return { value: "" };
     },
     getOperators() {
-        return ["=", "!=", "ilike", "not ilike", "set", "not set", "in", "not in"].map((key) =>
+        return ["=", "!=", "ilike", "not ilike", "set", "not set", "in", "not in", 'regexp', 'not regexp'].map((key) =>
             dso.get(key)
         );
     },
