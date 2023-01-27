@@ -36,6 +36,9 @@ var operator_mapping = {
     // custom
     "set": _lt("is set"),
     "not set": _lt("is not set"),
+
+    "regexp": _lt("matches"),
+    "not regexp": _lt("doesn't match"),
 };
 
 /**
@@ -898,7 +901,7 @@ var DomainLeaf = DomainNode.extend({
             case "char":
             case "text":
             case "html":
-                operators = _.pick(operator_mapping, "=", "!=", "ilike", "not ilike", "set", "not set", "in", "not in");
+                operators = _.pick(operator_mapping, "=", "!=", "ilike", "not ilike", "set", "not set", "in", "not in", "regexp", "not regexp");
                 break;
 
             case "many2many":
