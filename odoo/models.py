@@ -993,7 +993,7 @@ class BaseModel(metaclass=MetaModel):
 
                         # in import_compat mode, m2m should always be exported as
                         # a comma-separated list of xids or names in a single cell
-                        if import_compatible and field.type == 'many2many':
+                        if field.type == 'many2many':
                             index = None
                             # find out which subfield the user wants & its
                             # location as we might not get it as the first
