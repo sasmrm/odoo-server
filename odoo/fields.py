@@ -1856,7 +1856,7 @@ class Char(_String):
 
     def convert_to_column(self, value, record, values=None, validate=True):
         if value is None or value is False:
-            return None
+            return ""
         # we need to convert the string to a unicode object to be able
         # to evaluate its length (and possibly truncate it) reliably
         return super().convert_to_column(pycompat.to_text(value)[:self.size], record, values, validate)
