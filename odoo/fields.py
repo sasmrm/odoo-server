@@ -1881,6 +1881,22 @@ class Char(_String):
     def convert_to_column(self, value, record, values=None, validate=True):
         if value is None or value is False:
             return None
+        # Implement server-side string trimming
+        if type(value) == str:
+            if self.trim :
+                value = value.strip()
+            # Save null instead of "" (string empty)
+            if value == "":
+                return None
+        elif type(value) == dict and self.trim and self.translate:
+            # Save null instead of empty dict
+            if not value:
+                return None
+            items = value.items()
+            # loose check that this is a traductible char field.
+            if all(type(val) == str for _, val in items):
+                for key, val in items:
+                    value[key] = val.strip()
         # we need to convert the string to a unicode object to be able
         # to evaluate its length (and possibly truncate it) reliably
         return super().convert_to_column(pycompat.to_text(value)[:self.size], record, values, validate)
