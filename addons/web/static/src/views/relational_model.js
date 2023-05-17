@@ -1666,6 +1666,8 @@ class DynamicList extends DataPoint {
                         this.model.notify();
                     } catch (_) {
                         record.discard();
+                        // MRM-patch: Throw exception to user interface when error during multi-edit (T0000043)
+                        throw _;
                     }
                     validSelection.forEach((record) => {
                         record.selected = false;
