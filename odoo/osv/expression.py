@@ -1156,6 +1156,9 @@ class expression(object):
 
             if need_wildcard:
                 params = ['%%%s%%' % pycompat.to_text(right)]
+            # Do not truncate right value when regex operator is used (T0000041)
+            elif '~' in sql_operator:
+                params = [pycompat.to_text(right)]
             else:
                 params = [field.convert_to_column(right, model, validate=False)]
 
