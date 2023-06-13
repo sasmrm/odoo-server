@@ -1860,6 +1860,9 @@ class Char(_String):
         # Implement server-side string trimming
         if self.trim:
             value = value.strip()
+        # Save null instead of "" (string empty)
+        if value == "":
+            return None
         # we need to convert the string to a unicode object to be able
         # to evaluate its length (and possibly truncate it) reliably
         return super().convert_to_column(pycompat.to_text(value)[:self.size], record, values, validate)
