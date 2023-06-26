@@ -1881,9 +1881,14 @@ class Char(_String):
     def convert_to_column(self, value, record, values=None, validate=True):
         if value is None or value is False:
             return None
+        # we need to convert the string to a unicode object to be able
+        # to evaluate its length (and possibly truncate it) reliably
+        return super().convert_to_column(pycompat.to_text(value)[:self.size], record, values, validate)
+
+    def _convert_from_cache_to_column(self, value):
         # Implement server-side string trimming
         if type(value) == str:
-            if self.trim :
+            if self.trim:
                 value = value.strip()
             # Save null instead of "" (string empty)
             if value == "":
@@ -1897,9 +1902,7 @@ class Char(_String):
             if all(type(val) == str for _, val in items):
                 for key, val in items:
                     value[key] = val.strip()
-        # we need to convert the string to a unicode object to be able
-        # to evaluate its length (and possibly truncate it) reliably
-        return super().convert_to_column(pycompat.to_text(value)[:self.size], record, values, validate)
+        return super()._convert_from_cache_to_column(value)
 
     def convert_to_cache(self, value, record, validate=True):
         if value is None or value is False:
