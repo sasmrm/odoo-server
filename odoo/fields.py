@@ -1899,8 +1899,8 @@ class Char(_String):
         if type(value) == str:
             if self.trim:
                 value = value.strip()
-            # Save null instead of "" (string empty)
-            if value == "":
+            # Save null instead of "" (string empty), unless field is not null in database
+            if not self.required and value == "":
                 return None
         elif type(value) == dict and self.trim and self.translate:
             # Save null instead of empty dict
