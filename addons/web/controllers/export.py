@@ -181,6 +181,7 @@ class ExportXlsxWriter:
         self.header_bold_style = self.workbook.add_format({'text_wrap': True, 'bold': True, 'bg_color': '#e9ecef'})
         self.date_style = self.workbook.add_format({'text_wrap': True, 'num_format': 'yyyy-mm-dd'})
         self.datetime_style = self.workbook.add_format({'text_wrap': True, 'num_format': 'yyyy-mm-dd hh:mm:ss'})
+        self.integer_style = self.workbook.add_format({'num_format': '#,##0'})
         self.worksheet = self.workbook.add_worksheet()
         self.value = False
         self.float_format = '#,##0.00'
@@ -236,6 +237,8 @@ class ExportXlsxWriter:
             cell_style = self.datetime_style
         elif isinstance(cell_value, datetime.date):
             cell_style = self.date_style
+        elif isinstance(cell_value, int):
+            cell_style = self.integer_style
         elif isinstance(cell_value, float):
             cell_style.set_num_format(self.float_format)
         self.write(row, column, cell_value, cell_style)
