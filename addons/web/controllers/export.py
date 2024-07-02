@@ -175,7 +175,7 @@ class ExportXlsxWriter:
     def __init__(self, field_names, row_count=0):
         self.field_names = field_names
         self.output = io.BytesIO()
-        self.workbook = xlsxwriter.Workbook(self.output, {'in_memory': True})
+        self.workbook = xlsxwriter.Workbook(self.output, {'constant_memory': True})
         self.base_style = self.workbook.add_format({'text_wrap': True})
         self.header_style = self.workbook.add_format({'bold': True})
         self.header_bold_style = self.workbook.add_format({'text_wrap': True, 'bold': True, 'bg_color': '#e9ecef'})
