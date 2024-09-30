@@ -1098,6 +1098,12 @@ class expression(object):
                     if left != 'id':
                         field = model._fields[left]
                         params = [field.convert_to_column(p, model, validate=False) for p in params]
+                # Because convert_to_column can transform empty string to null, we need to make sure null values
+                # are not passed in params (field NOT IN (NULL) is always false in Postgres)
+                if None in params:
+                    params = [it for it in params if it is not None]
+                    check_null = True
+                if params:
                     query = f'({table_alias}."{left}" {operator} %s)'
                     params = [tuple(params)]
                 else:
