@@ -2759,9 +2759,10 @@ class Selection(Field):
         raise ValueError("Wrong value for %s: %r" % (self, value))
 
     def convert_to_export(self, value, record):
-        if not isinstance(self.selection, list):
-            # FIXME: this reproduces an existing buggy behavior!
-            return value if value else ''
+        # 20250205/Damien: Export selection translated https://github.com/sasmrm/mrm-odoo/issues/3864
+        # if not isinstance(self.selection, list):
+        #     # FIXME: this reproduces an existing buggy behavior!
+        #     return value if value else ''
         for item in self._description_selection(record.env):
             if item[0] == value:
                 return item[1]
