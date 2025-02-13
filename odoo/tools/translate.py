@@ -1541,6 +1541,11 @@ class CodeTranslations:
         }
 
     def get_python_translations(self, module_name, lang):
+        # Because of the unified translation (fr_FR.po from mrm_base) file wee need this.
+        # Otherwise we loose all the translations from python and javascript code
+        if module_name.startswith("mrm_"):
+            module_name = "mrm_base"
+            print("module",module_name)
         if (module_name, lang) not in self.python_translations:
             self._load_python_translations(module_name, lang)
         return self.python_translations[(module_name, lang)]
