@@ -966,8 +966,12 @@ class expression(object):
 
                 elif field.translate and isinstance(right, str):
                     # Automatically use regex operator instead of like when a regex is detected in right part
-                    if operator in ("like", "ilike", "=like", "=ilike") and right and isinstance(right, str) and right.startswith("^") and right.endswith("$"):
-                        operator = "regexp"
+                    if operator in ("like", "ilike", "=like", "=ilike") and right and isinstance(right, str) and right.startswith("^"):
+                        # Remove wildcard % at the end to support use in (..., '=like', self+'%') domain
+                        if right.endswith("$%"):
+                            right = right.rstrip("%")
+                        if right.endswith("$"):
+                            operator = "regexp"
 
                     sql_operator = {
                         '=like': 'like', '=ilike': 'ilike', 'regexp': '~*', 'not regexp': '!~*'
@@ -1153,8 +1157,12 @@ class expression(object):
                 raise ValueError("Invalid field %r in domain term %r" % (left, leaf))
 
             # Automatically use regex operator when a regex is detected in right part
-            if operator in ("like", "ilike", "=like", "=ilike") and right and isinstance(right, str) and right.startswith("^") and right.endswith("$"):
-                operator = "regexp"
+            if operator in ("like", "ilike", "=like", "=ilike") and right and isinstance(right, str) and right.startswith("^"):
+                # Remove wildcard % at the end to support use in (..., '=like', self+'%') domain
+                if right.endswith("$%"):
+                    right = right.rstrip("%")
+                if right.endswith("$"):
+                    operator = "regexp"
             # Automatically prepend and append % wildcards on right part when like operator is used (Odoo defaults)
             # except if % or _ wildcard is already present in right part (MRM customization)
             try:
