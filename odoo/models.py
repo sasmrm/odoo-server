@@ -1709,6 +1709,9 @@ class BaseModel(metaclass=MetaModel):
                                  read_group_result, read_group_order=None):
         """Helper method for filling in empty groups for all possible values of
            the field being grouped by"""
+        if '.' in groupby:
+            # dotted traversal groupby: no group_expand support
+            return read_group_result
         field = self._fields[groupby]
         if not field.group_expand:
             return read_group_result
@@ -1967,9 +1970,12 @@ class BaseModel(metaclass=MetaModel):
             if is_many2one_id:
                 order_field = order_field[:-3]
             if order_field == 'id' or order_field in groupby_fields:
-                field = self._fields[order_field.split(':')[0]]
+                order_fname = order_field.split(':')[0]
+                # dotted gb: no _name-based ordering, fall back to column ORDER BY
+                field = self._fields.get(order_fname) if '.' not in order_fname else None
                 if (
-                    field.type == 'many2one'
+                    field is not None
+                    and field.type == 'many2one'
                     and not self.env[field.comodel_name]._order == 'id'
                     and not is_many2one_id
                 ):
@@ -2002,14 +2008,52 @@ class BaseModel(metaclass=MetaModel):
             field name, type, time information, qualified name, ...
         """
         split = gb.split(':')
-        field = self._fields.get(split[0])
-        if not field:
-            raise ValueError("Invalid field %r on model %r" % (split[0], self._name))
+        fname = split[0]
+        # Single-hop traversal on a stored many2one: "parent_id.leaf"
+        dotted_comodel = None
+        if '.' in fname:
+            parts = fname.split('.')
+            if len(parts) != 2:
+                raise UserError(_(
+                    "Field %r in 'groupby': only single-hop traversal is supported.", fname,
+                ))
+            parent_name, leaf_name = parts
+            parent_field = self._fields.get(parent_name)
+            if not parent_field:
+                raise ValueError("Invalid field %r on model %r" % (parent_name, self._name))
+            if parent_field.type != 'many2one' or not parent_field.store:
+                raise UserError(_(
+                    "Field %r in 'groupby': traversal is only supported on stored many2one fields.",
+                    parent_name,
+                ))
+            comodel = self.env[parent_field.comodel_name]
+            leaf_field = comodel._fields.get(leaf_name)
+            if not leaf_field:
+                raise ValueError("Invalid field %r on model %r" % (leaf_name, comodel._name))
+            if not (leaf_field.store and leaf_field.column_type):
+                raise UserError(_(
+                    "Field %r in 'groupby': leaf field %r must be a stored column.",
+                    fname, leaf_name,
+                ))
+            if leaf_field.type == 'many2many':
+                raise UserError(_(
+                    "Field %r in 'groupby': many2many leaf is not supported.", fname,
+                ))
+            parent_alias = query.left_join(
+                self._table, parent_name, comodel._table, 'id', parent_name,
+            )
+            field = leaf_field
+            qualified_field = '"%s"."%s"' % (parent_alias, leaf_name)
+            dotted_comodel = leaf_field.comodel_name if leaf_field.type == 'many2one' else None
+        else:
+            field = self._fields.get(fname)
+            if not field:
+                raise ValueError("Invalid field %r on model %r" % (fname, self._name))
+            qualified_field = self._inherits_join_calc(self._table, fname, query)
         field_type = field.type
         gb_function = split[1] if len(split) == 2 else None
         temporal = field_type in ('date', 'datetime')
         tz_convert = field_type == 'datetime' and self._context.get('tz') in pytz.all_timezones
-        qualified_field = self._inherits_join_calc(self._table, split[0], query)
         if temporal:
             display_formats = {
                 # Careful with week/year formats:
@@ -2042,7 +2086,7 @@ class BaseModel(metaclass=MetaModel):
         if field_type == 'boolean':
             qualified_field = "coalesce(%s,false)" % qualified_field
         return {
-            'field': split[0],
+            'field': fname,
             'groupby': gb,
             'type': field_type,
             'display_format': display_formats[gb_function or 'month'] if temporal else None,
@@ -2050,6 +2094,7 @@ class BaseModel(metaclass=MetaModel):
             'granularity': gb_function or 'month' if temporal else None,
             'tz_convert': tz_convert,
             'qualified_field': qualified_field,
+            'dotted_comodel': dotted_comodel,
         }
 
     @api.model
@@ -2157,7 +2202,7 @@ class BaseModel(metaclass=MetaModel):
             order_list = []
             for order_spec in groupby_list:
                 field_name = order_spec.split(":")[0]  # field name could be formatted like "field:group_func"
-                if self._fields[field_name].type == 'many2one':
+                if '.' not in field_name and self._fields[field_name].type == 'many2one':
                     order_spec = f"{field_name}.id"  # do not order by comodel's order
                 order_list.append(order_spec)
             orderby = ','.join(order_list)
@@ -2238,6 +2283,9 @@ class BaseModel(metaclass=MetaModel):
 
         self._apply_ir_rules(query, 'read')
         for gb in groupby_fields:
+            if '.' in gb:
+                # dotted traversal already validated in _read_group_process_groupby
+                continue
             if gb not in self._fields:
                 raise UserError(_("Unknown field %r in 'groupby'", gb))
             if not self._fields[gb].base_field.groupable:
@@ -2300,7 +2348,15 @@ class BaseModel(metaclass=MetaModel):
         for gb in annotated_groupbys:
             select_terms.append('%s as "%s" ' % (gb['qualified_field'], gb['groupby']))
 
-        self._flush_search(domain, fields=fnames + groupby_fields)
+        flush_fields = list(fnames)
+        for gb in groupby_fields:
+            if '.' in gb:
+                parent_name, leaf_name = gb.split('.', 1)
+                flush_fields.append(parent_name)
+                self.env[self._fields[parent_name].comodel_name].flush_model([leaf_name])
+            else:
+                flush_fields.append(gb)
+        self._flush_search(domain, fields=flush_fields)
 
         groupby_terms, orderby_terms = self._read_group_prepare(order, aggregated_fields, annotated_groupbys, query)
         from_clause, where_clause, where_clause_params = query.get_sql()
@@ -2366,13 +2422,21 @@ class BaseModel(metaclass=MetaModel):
         return result
 
     def _read_group_resolve_many2x_fields(self, data, fields):
-        many2xfields = {field['field'] for field in fields if field['type'] in ['many2one', 'many2many']}
-        for field in many2xfields:
-            ids_set = {d[field] for d in data if d[field]}
-            m2x_records = self.env[self._fields[field].comodel_name].browse(ids_set)
+        comodel_by_field = {}
+        for field in fields:
+            if field['type'] not in ('many2one', 'many2many'):
+                continue
+            fname = field['field']
+            if '.' in fname:
+                comodel_by_field[fname] = field['dotted_comodel']
+            else:
+                comodel_by_field[fname] = self._fields[fname].comodel_name
+        for fname, comodel_name in comodel_by_field.items():
+            ids_set = {d[fname] for d in data if d[fname]}
+            m2x_records = self.env[comodel_name].browse(ids_set)
             data_dict = dict(lazy_name_get(m2x_records.sudo()))
             for d in data:
-                d[field] = (d[field], data_dict[d[field]]) if d[field] else False
+                d[fname] = (d[fname], data_dict[d[fname]]) if d[fname] else False
 
     def _inherits_join_add(self, current_model, parent_model_name, query):
         """
